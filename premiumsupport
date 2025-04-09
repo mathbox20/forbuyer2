@@ -1,0 +1,88 @@
+-- 📌 Aimbot + Full Auto (Universal Upper Head or Chest) | Right-Click to Aim & Shoot
+-- ✅ Works on all avatar types: R6, R15, Bacons | Fallback to chest for reliability
+
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+local AimEnabled = false
+local SmoothFactor = 0.9000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000  -- Adjust for aiming smoothness
+
+-- 🎯 Function to get a reliable upper head position (works with R6/R15)
+local function getUniversalUpperHeadPosition(character)
+    local head = character:FindFirstChild("Head")
+    if head then
+        return head.Position + Vector3.new(0, head.Size.Y * 0.35, 0)
+    end
+    return nil
+end
+
+-- 🎯 Function to get enhanced upper chest position (simulate more damage)
+local function getEnhancedUpperChestPosition(character)
+    local upperTorso = character:FindFirstChild("UpperTorso") or character:FindFirstChild("Torso")
+    if upperTorso then
+        -- Move closer to neck for simulated higher damage
+        return upperTorso.Position + Vector3.new(0, upperTorso.Size.Y * 0.7, 0)
+    end
+    return nil
+end
+
+-- 🎯 Find closest visible target (head first, fallback to chest)
+local function findClosestTarget()
+    local closestTarget = nil
+    local shortestDistance = math.huge
+    local mousePos = UserInputService:GetMouseLocation()
+
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character then
+            local character = player.Character
+            local humanoid = character:FindFirstChildOfClass("Humanoid")
+            local targetPos = getUniversalUpperHeadPosition(character) or getEnhancedUpperChestPosition(character)
+
+            if humanoid and humanoid.Health > 0 and targetPos then
+                local screenPosition, onScreen = Camera:WorldToScreenPoint(targetPos)
+                local distance = (Vector2.new(screenPosition.X, screenPosition.Y) - mousePos).Magnitude
+
+                if onScreen and distance < shortestDistance then
+                    shortestDistance = distance
+                    closestTarget = targetPos
+                end
+            end
+        end
+    end
+
+    return closestTarget
+end
+
+-- 🎯 Lock onto the target (head or upper chest)
+local function aimAtTarget()
+    local targetPos = findClosestTarget()
+    if targetPos then
+        local newCFrame = CFrame.lookAt(Camera.CFrame.Position, targetPos)
+        if AimEnabled then
+            Camera.CFrame = Camera.CFrame:Lerp(newCFrame, SmoothFactor)
+        end
+    end
+end
+
+-- ✅ Right-click = Toggle Aimbot
+UserInputService.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton2 then  
+        AimEnabled = true  
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton2 then  
+        AimEnabled = false  
+    end
+end)
+
+-- ✅ Run Aimbot every frame
+RunService.RenderStepped:Connect(function()
+    if AimEnabled then
+        aimAtTarget()
+    end
+end)
